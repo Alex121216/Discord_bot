@@ -199,17 +199,19 @@ GAMER_TAG_MAX_LEN = 16  # Call of Duty / Activision: máximo 16 caracteres (solo
 
 def is_valid_gamer_tag(text: str) -> bool:
     """
-    Comprueba si el texto es un gamer tag válido según requisitos de Call of Duty.
-    El nombre (parte antes de #) debe tener entre 2 y 16 caracteres.
+    Comprueba si el texto es un gamer tag válido (formato tipo Call of Duty / Activision).
+    - Formato: 2-16 caracteres alfanuméricos, opcionalmente # y números.
+    - Debe contener al menos un dígito o el símbolo # para no aceptar texto suelto (ej. "Hola", "Jrjfjfff").
     """
     if not text or not isinstance(text, str):
         return False
     cleaned = text.strip()
-    # La parte del nombre (antes de #) debe tener 2-16 caracteres
-    name_part = cleaned.split("#")[0] if "#" in cleaned else cleaned
-    if len(name_part) < GAMER_TAG_MIN_LEN or len(name_part) > GAMER_TAG_MAX_LEN:
+    if not GAMER_TAG_PATTERN.fullmatch(cleaned):
         return False
-    return bool(GAMER_TAG_PATTERN.fullmatch(cleaned))
+    # Exigir al menos un número o # para distinguir de mensajes que no son tags (ej. "Hola", "Jrjfjfff")
+    if "#" in cleaned or re.search(r"\d", cleaned):
+        return True
+    return False
 
 
 def normalize_tag(text: str) -> str:
@@ -425,7 +427,7 @@ async def on_message(message: discord.Message):
             pass
         try:
             await message.channel.send(
-                "Solo se permiten gamer tags de Call of Duty (2-16 caracteres, ej: MiUsuario o Gamer#1234567).",
+                f"{message.author.mention} Solo se permiten gamer tags de Call of Duty (2-16 caracteres, ej: MiUsuario o Gamer#1234567).",
                 delete_after=10,
             )
         except discord.HTTPException:
@@ -443,7 +445,7 @@ async def on_message(message: discord.Message):
             pass
         try:
             await message.channel.send(
-                "Ese gamer tag ya fue publicado antes.",
+                f"{message.author.mention} Ese gamer tag ya fue publicado antes.",
                 delete_after=10,
             )
         except discord.HTTPException:
@@ -490,7 +492,7 @@ async def on_message_edit(before: discord.Message, after: discord.Message):
             pass
         try:
             await after.channel.send(
-                "Solo se permiten gamer tags de Call of Duty (2-16 caracteres, ej: MiUsuario o Gamer#1234567).",
+                f"{after.author.mention} Solo se permiten gamer tags de Call of Duty (2-16 caracteres, ej: MiUsuario o Gamer#1234567).",
                 delete_after=10,
             )
         except discord.HTTPException:
@@ -519,7 +521,7 @@ async def on_message_edit(before: discord.Message, after: discord.Message):
             pass
         try:
             await after.channel.send(
-                "Ese gamer tag ya fue publicado antes.",
+                f"{after.author.mention} Ese gamer tag ya fue publicado antes.",
                 delete_after=10,
             )
         except discord.HTTPException:
