@@ -187,31 +187,30 @@ def upsert_tag_for_message(message_id: int, normalized_tag: str, original_tag: s
 # Validación y normalización de gamer tags
 # ---------------------------------------------------------------------------
 
-# Formato según requisitos de Call of Duty / Activision ID: nombre de 2-16 caracteres.
-# Caracteres permitidos: letras, números, guión bajo, guión, punto.
-# Opcionalmente "#" y dígitos para el identificador único (ej. Usuario#1234567).
+# Formato Activision ID / Call of Duty: nombre (2-16 caracteres) + "#" + dígitos.
+# Solo se acepta este formato para evitar texto aleatorio (ej. "Hola", "Ry3y3y3h").
 GAMER_TAG_PATTERN = re.compile(
-    r"^[a-zA-Z0-9_\-.]{2,16}(?:#[0-9]+)?$"
+    r"^[a-zA-Z0-9_\-.]{2,16}#[0-9]+$"
 )
-GAMER_TAG_MIN_LEN = 2   # Call of Duty / Activision: mínimo 2 caracteres
+GAMER_TAG_MIN_LEN = 2   # Call of Duty / Activision: mínimo 2 caracteres (solo el nombre)
 GAMER_TAG_MAX_LEN = 16  # Call of Duty / Activision: máximo 16 caracteres (solo el nombre)
 
 
 def is_valid_gamer_tag(text: str) -> bool:
     """
-    Comprueba si el texto es un gamer tag válido (formato tipo Call of Duty / Activision).
-    - Formato: 2-16 caracteres alfanuméricos, opcionalmente # y números.
-    - Debe contener al menos un dígito o el símbolo # para no aceptar texto suelto (ej. "Hola", "Jrjfjfff").
+    Comprueba si el texto es un gamer tag válido (formato Activision ID: Nombre#1234567).
+    Obligatorio: nombre de 2-16 caracteres + # + al menos un dígito.
+    Así se rechazan mensajes aleatorios como "Hola", "Ry3y3y3h" o "Jrjfjfff".
     """
     if not text or not isinstance(text, str):
         return False
     cleaned = text.strip()
-    if not GAMER_TAG_PATTERN.fullmatch(cleaned):
+    if "#" not in cleaned:
         return False
-    # Exigir al menos un número o # para distinguir de mensajes que no son tags (ej. "Hola", "Jrjfjfff")
-    if "#" in cleaned or re.search(r"\d", cleaned):
-        return True
-    return False
+    name_part = cleaned.split("#")[0]
+    if len(name_part) < GAMER_TAG_MIN_LEN or len(name_part) > GAMER_TAG_MAX_LEN:
+        return False
+    return bool(GAMER_TAG_PATTERN.fullmatch(cleaned))
 
 
 def normalize_tag(text: str) -> str:
@@ -427,7 +426,7 @@ async def on_message(message: discord.Message):
             pass
         try:
             await message.channel.send(
-                f"{message.author.mention} Solo se permiten gamer tags de Call of Duty (2-16 caracteres, ej: MiUsuario o Gamer#1234567).",
+                f"{message.author.mention} Solo se permiten gamer tags de Call of Duty con formato Activision ID (Nombre#Números, ej: Gamer#1234567).",
                 delete_after=10,
             )
         except discord.HTTPException:
@@ -492,7 +491,7 @@ async def on_message_edit(before: discord.Message, after: discord.Message):
             pass
         try:
             await after.channel.send(
-                f"{after.author.mention} Solo se permiten gamer tags de Call of Duty (2-16 caracteres, ej: MiUsuario o Gamer#1234567).",
+                f"{after.author.mention} Solo se permiten gamer tags de Call of Duty con formato Activision ID (Nombre#Números, ej: Gamer#1234567).",
                 delete_after=10,
             )
         except discord.HTTPException:
