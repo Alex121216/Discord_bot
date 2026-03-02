@@ -21,7 +21,7 @@ DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 CHANNEL_ID = int(os.getenv("CHANNEL_ID", 0))
 BOT_PREFIX = os.getenv("BOT_PREFIX", "!")
 DB_FILE = os.getenv("DB_FILE", "gamer_tags.db")
-COMMAND_DELETE_AFTER = 30  # segundos para borrar mensaje del comando y respuesta del bot
+COMMAND_DELETE_AFTER = 10  # segundos para borrar mensaje del comando y respuesta del bot
 
 if not DISCORD_TOKEN:
     raise ValueError("DISCORD_TOKEN no está definido en .env")
@@ -296,9 +296,10 @@ async def clean_non_gamertag_messages(channel: discord.TextChannel) -> int:
                 except discord.HTTPException:
                     pass
                 continue
-            # Mensajes de usuarios: borrar si están vacíos o no son gamer tag válido
+            # Mensajes de usuarios: borrar si están vacíos, son comandos (!checktag, etc.) o no son gamer tag válido
             content = (message.content or "").strip()
-            if not content or not is_valid_gamer_tag(content):
+            is_command = content.startswith(BOT_PREFIX)
+            if not content or is_command or not is_valid_gamer_tag(content):
                 try:
                     await message.delete()
                     deleted += 1
