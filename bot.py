@@ -21,6 +21,7 @@ DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 CHANNEL_ID = int(os.getenv("CHANNEL_ID", 0))
 BOT_PREFIX = os.getenv("BOT_PREFIX", "!")
 DB_FILE = os.getenv("DB_FILE", "gamer_tags.db")
+COMMAND_DELETE_AFTER = 30  # segundos para borrar mensaje del comando y respuesta del bot
 
 if not DISCORD_TOKEN:
     raise ValueError("DISCORD_TOKEN no está definido en .env")
@@ -547,6 +548,24 @@ async def on_message_delete(message: discord.Message):
 # Comandos de administrador
 # ---------------------------------------------------------------------------
 
+async def _delete_message_after(message: discord.Message, seconds: int) -> None:
+    """Programa el borrado de un mensaje tras los segundos indicados."""
+    try:
+        await asyncio.sleep(seconds)
+        await message.delete()
+    except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+        pass
+
+
+@bot.after_invoke
+async def _delete_command_and_output(ctx: commands.Context):
+    """En el canal de gamer tags: borrar el mensaje del comando después de 30 segundos."""
+    if not ctx.channel or ctx.channel.id != CHANNEL_ID:
+        return
+    if ctx.message:
+        asyncio.create_task(_delete_message_after(ctx.message, COMMAND_DELETE_AFTER))
+
+
 def is_admin_or_manage_guild(ctx: commands.Context) -> bool:
     """Comprueba si el usuario tiene permiso de administrador o gestionar servidor."""
     if not ctx.author.guild_permissions.administrator:
@@ -564,30 +583,34 @@ async def cmd_checktag(ctx: commands.Context, *, tag: str = ""):
     Solo administradores o gestión del servidor.
     """
     if not is_admin_or_manage_guild(ctx):
-        await ctx.send("No tienes permiso para usar este comando.", delete_after=8)
+        await ctx.send("No tienes permiso para usar este comando.", delete_after=COMMAND_DELETE_AFTER)
         return
     if ctx.channel.id != CHANNEL_ID:
-        await ctx.send("Este comando solo puede usarse en el canal de gamer tags.", delete_after=8)
+        await ctx.send("Este comando solo puede usarse en el canal de gamer tags.", delete_after=COMMAND_DELETE_AFTER)
         return
 
     tag = tag.strip()
     if not tag:
-        await ctx.send("Debes indicar un tag. Ejemplo: `!checktag MiGamerTag`", delete_after=15)
+        await ctx.send("Debes indicar un tag. Ejemplo: `!checktag MiGamerTag`", delete_after=COMMAND_DELETE_AFTER)
         return
 
     normalized = normalize_tag(tag)
     if not normalized:
-        await ctx.send("El tag no puede estar vacío.", delete_after=10)
+        await ctx.send("El tag no puede estar vacío.", delete_after=COMMAND_DELETE_AFTER)
         return
 
     info = get_tag_info(CHANNEL_ID, normalized)
     if info is None:
-        await ctx.send(f"El gamer tag **{discord.utils.escape_markdown(normalized)}** no está registrado.")
+        await ctx.send(
+            f"El gamer tag **{discord.utils.escape_markdown(normalized)}** no está registrado.",
+            delete_after=COMMAND_DELETE_AFTER,
+        )
         return
 
     await ctx.send(
         f"El gamer tag **{discord.utils.escape_markdown(normalized)}** ya existe "
-        f"(registrado el {info['created_at'][:10]})."
+        f"(registrado el {info['created_at'][:10]}).",
+        delete_after=COMMAND_DELETE_AFTER,
     )
 
 
@@ -600,27 +623,33 @@ async def cmd_removetag(ctx: commands.Context, *, tag: str = ""):
     Solo administradores o gestión del servidor.
     """
     if not is_admin_or_manage_guild(ctx):
-        await ctx.send("No tienes permiso para usar este comando.", delete_after=8)
+        await ctx.send("No tienes permiso para usar este comando.", delete_after=COMMAND_DELETE_AFTER)
         return
     if ctx.channel.id != CHANNEL_ID:
-        await ctx.send("Este comando solo puede usarse en el canal de gamer tags.", delete_after=8)
+        await ctx.send("Este comando solo puede usarse en el canal de gamer tags.", delete_after=COMMAND_DELETE_AFTER)
         return
 
     tag = tag.strip()
     if not tag:
-        await ctx.send("Debes indicar un tag. Ejemplo: `!removetag MiGamerTag`", delete_after=10)
+        await ctx.send("Debes indicar un tag. Ejemplo: `!removetag MiGamerTag`", delete_after=COMMAND_DELETE_AFTER)
         return
 
     normalized = normalize_tag(tag)
     if not normalized:
-        await ctx.send("El tag no puede estar vacío.", delete_after=8)
+        await ctx.send("El tag no puede estar vacío.", delete_after=COMMAND_DELETE_AFTER)
         return
 
     removed = remove_tag_by_normalized(CHANNEL_ID, normalized)
     if removed:
-        await ctx.send(f"Gamer tag **{discord.utils.escape_markdown(normalized)}** eliminado de la base de datos.")
+        await ctx.send(
+            f"Gamer tag **{discord.utils.escape_markdown(normalized)}** eliminado de la base de datos.",
+            delete_after=COMMAND_DELETE_AFTER,
+        )
     else:
-        await ctx.send(f"El gamer tag **{discord.utils.escape_markdown(normalized)}** no estaba registrado.")
+        await ctx.send(
+            f"El gamer tag **{discord.utils.escape_markdown(normalized)}** no estaba registrado.",
+            delete_after=COMMAND_DELETE_AFTER,
+        )
 
 
 @bot.command(name="rebuildtags")
@@ -632,10 +661,10 @@ async def cmd_rebuildtags(ctx: commands.Context):
     Solo administradores o gestión del servidor.
     """
     if not is_admin_or_manage_guild(ctx):
-        await ctx.send("No tienes permiso para usar este comando.", delete_after=8)
+        await ctx.send("No tienes permiso para usar este comando.", delete_after=COMMAND_DELETE_AFTER)
         return
     if ctx.channel.id != CHANNEL_ID:
-        await ctx.send("Este comando solo puede usarse en el canal de gamer tags.", delete_after=8)
+        await ctx.send("Este comando solo puede usarse en el canal de gamer tags.", delete_after=COMMAND_DELETE_AFTER)
         return
 
     clear_channel_tags(CHANNEL_ID)
@@ -652,6 +681,7 @@ async def cmd_rebuildtags(ctx: commands.Context):
         await msg.edit(content="No tengo permiso para leer el historial del canal.")
     except Exception as e:
         await msg.edit(content=f"Error: {e}")
+    asyncio.create_task(_delete_message_after(msg, COMMAND_DELETE_AFTER))
 
 
 @bot.command(name="cleanduplicates")
@@ -663,10 +693,10 @@ async def cmd_cleanduplicates(ctx: commands.Context):
     Solo administradores o gestión del servidor.
     """
     if not is_admin_or_manage_guild(ctx):
-        await ctx.send("No tienes permiso para usar este comando.", delete_after=8)
+        await ctx.send("No tienes permiso para usar este comando.", delete_after=COMMAND_DELETE_AFTER)
         return
     if ctx.channel.id != CHANNEL_ID:
-        await ctx.send("Este comando solo puede usarse en el canal de gamer tags.", delete_after=8)
+        await ctx.send("Este comando solo puede usarse en el canal de gamer tags.", delete_after=COMMAND_DELETE_AFTER)
         return
 
     msg = await ctx.send("Limpiando mensajes duplicados...")
@@ -678,6 +708,7 @@ async def cmd_cleanduplicates(ctx: commands.Context):
         await msg.edit(content="No tengo permiso para leer o borrar mensajes en el canal.")
     except Exception as e:
         await msg.edit(content=f"Error: {e}")
+    asyncio.create_task(_delete_message_after(msg, COMMAND_DELETE_AFTER))
 
 
 # ---------------------------------------------------------------------------
