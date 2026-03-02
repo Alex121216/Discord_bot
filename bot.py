@@ -109,13 +109,13 @@ def tag_exists(channel_id: int, normalized_tag: str) -> bool:
 
 
 def insert_tag(message_id: int, normalized_tag: str, original_tag: str,
-               channel_id: int, author_id: int) -> None:
+channel_id: int, author_id: int) -> None:
     """Guarda un nuevo gamer tag."""
     with get_db() as conn:
         conn.execute(
             """INSERT INTO gamer_tags
-               (message_id, normalized_tag, original_tag, channel_id, author_id, created_at)
-               VALUES (?, ?, ?, ?, ?, ?)""",
+            (message_id, normalized_tag, original_tag, channel_id, author_id, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)""",
             (
                 str(message_id),
                 normalized_tag,
@@ -155,23 +155,23 @@ def get_tag_info(channel_id: int, normalized_tag: str) -> sqlite3.Row | None:
     with get_db() as conn:
         return conn.execute(
             """SELECT message_id, original_tag, author_id, created_at
-               FROM gamer_tags WHERE channel_id = ? AND normalized_tag = ?
-               LIMIT 1""",
+            FROM gamer_tags WHERE channel_id = ? AND normalized_tag = ?
+            LIMIT 1""",
             (channel_id, normalized_tag),
         ).fetchone()
 
 
 def upsert_tag_for_message(message_id: int, normalized_tag: str, original_tag: str,
-                           channel_id: int, author_id: int) -> None:
+                        channel_id: int, author_id: int) -> None:
     """Inserta o actualiza el gamer tag asociado a un message_id."""
     with get_db() as conn:
         conn.execute(
             """INSERT INTO gamer_tags
-               (message_id, normalized_tag, original_tag, channel_id, author_id, created_at)
-               VALUES (?, ?, ?, ?, ?, ?)
-               ON CONFLICT(message_id) DO UPDATE SET
-                 normalized_tag = excluded.normalized_tag,
-                 original_tag = excluded.original_tag""",
+            (message_id, normalized_tag, original_tag, channel_id, author_id, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(message_id) DO UPDATE SET
+                normalized_tag = excluded.normalized_tag,
+                original_tag = excluded.original_tag""",
             (
                 str(message_id),
                 normalized_tag,
@@ -187,29 +187,24 @@ def upsert_tag_for_message(message_id: int, normalized_tag: str, original_tag: s
 # Validación y normalización de gamer tags
 # ---------------------------------------------------------------------------
 
-# Formato Activision ID / Call of Duty: nombre (2-16 caracteres) + "#" + dígitos.
-# Solo se acepta este formato para evitar texto aleatorio (ej. "Hola", "Ry3y3y3h").
+# Formato Activision ID: nombre (2-16 caracteres) + "#" + dígitos.
+# El nombre puede tener cualquier carácter: letras latinas, chinas, japonesas, símbolos, etc.
 GAMER_TAG_PATTERN = re.compile(
-    r"^[a-zA-Z0-9_\-.]{2,16}#[0-9]+$"
+    r"^[^#]{2,16}#[0-9]+$"
 )
-GAMER_TAG_MIN_LEN = 2   # Call of Duty / Activision: mínimo 2 caracteres (solo el nombre)
-GAMER_TAG_MAX_LEN = 16  # Call of Duty / Activision: máximo 16 caracteres (solo el nombre)
+GAMER_TAG_MIN_LEN = 2   # mínimo 2 caracteres (solo el nombre)
+GAMER_TAG_MAX_LEN = 16  # máximo 16 caracteres (solo el nombre)
 
 
 def is_valid_gamer_tag(text: str) -> bool:
     """
     Comprueba si el texto es un gamer tag válido (formato Activision ID: Nombre#1234567).
-    Obligatorio: nombre de 2-16 caracteres + # + al menos un dígito.
-    Así se rechazan mensajes aleatorios como "Hola", "Ry3y3y3h" o "Jrjfjfff".
+    El nombre puede contener cualquier carácter Unicode (letras latinas, chinas, japonesas,
+    caracteres especiales, etc.). Obligatorio: # seguido solo de dígitos.
     """
     if not text or not isinstance(text, str):
         return False
     cleaned = text.strip()
-    if "#" not in cleaned:
-        return False
-    name_part = cleaned.split("#")[0]
-    if len(name_part) < GAMER_TAG_MIN_LEN or len(name_part) > GAMER_TAG_MAX_LEN:
-        return False
     return bool(GAMER_TAG_PATTERN.fullmatch(cleaned))
 
 
@@ -507,7 +502,7 @@ async def on_message_edit(before: discord.Message, after: discord.Message):
     with get_db() as conn:
         existing = conn.execute(
             """SELECT message_id FROM gamer_tags
-               WHERE channel_id = ? AND normalized_tag = ? AND message_id != ?""",
+            WHERE channel_id = ? AND normalized_tag = ? AND message_id != ?""",
             (after.channel.id, normalized, str(after.id)),
         ).fetchone()
 
@@ -577,12 +572,12 @@ async def cmd_checktag(ctx: commands.Context, *, tag: str = ""):
 
     tag = tag.strip()
     if not tag:
-        await ctx.send("Debes indicar un tag. Ejemplo: `!checktag MiGamerTag`", delete_after=10)
+        await ctx.send("Debes indicar un tag. Ejemplo: `!checktag MiGamerTag`", delete_after=15)
         return
 
     normalized = normalize_tag(tag)
     if not normalized:
-        await ctx.send("El tag no puede estar vacío.", delete_after=8)
+        await ctx.send("El tag no puede estar vacío.", delete_after=10)
         return
 
     info = get_tag_info(CHANNEL_ID, normalized)
