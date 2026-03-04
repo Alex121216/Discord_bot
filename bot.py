@@ -410,17 +410,16 @@ async def on_message(message: discord.Message):
         await bot.process_commands(message)
         return
 
-    # Mensajes vacíos
     content = (message.content or "").strip()
-    if not content:
-        return
 
-    # Borrar cualquier mensaje que no sea un gamer tag válido
-    if not is_valid_gamer_tag(content):
+    # Borrar cualquier mensaje que no sea un gamer tag válido (incl. mensajes vacíos)
+    if not content or not is_valid_gamer_tag(content):
         try:
             await message.delete()
         except discord.Forbidden:
-            pass
+            print("No se pudo borrar el mensaje: el bot necesita permiso 'Gestionar mensajes' en el canal.")
+        except discord.HTTPException as e:
+            print(f"No se pudo borrar el mensaje: {e}")
         try:
             await message.channel.send(
                 f"{message.author.mention} Solo se permiten gamer tags de Call of Duty con formato Activision ID (Nombre#Números, ej: Gamer#1234567).",
@@ -438,6 +437,8 @@ async def on_message(message: discord.Message):
         try:
             await message.delete()
         except discord.Forbidden:
+            print("No se pudo borrar el mensaje duplicado: el bot necesita permiso 'Gestionar mensajes'.")
+        except discord.HTTPException:
             pass
         try:
             await message.channel.send(
