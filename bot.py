@@ -4,9 +4,10 @@ Evita gamer tags duplicados usando SQLite y escaneo del historial.
 """
 
 import os
-import sqlite3
 import re
+import sqlite3
 import asyncio
+import unicodedata
 from datetime import datetime
 from contextlib import contextmanager
 
@@ -211,15 +212,16 @@ def is_valid_gamer_tag(text: str) -> bool:
 
 def normalize_tag(text: str) -> str:
     """
-    Normaliza el texto del gamer tag:
-    - Quita espacios al inicio y al final
-    - Convierte múltiples espacios en uno solo
+    Normaliza el texto del gamer tag para comparación y detección de duplicados:
+    - Quita espacios al inicio y al final, unifica espacios múltiples
+    - Normalización Unicode NFC (mismo tag con distintos códigos → mismo resultado)
     - Minúsculas para comparación
     """
     if not text or not isinstance(text, str):
         return ""
     cleaned = text.strip()
     cleaned = re.sub(r"\s+", " ", cleaned)
+    cleaned = unicodedata.normalize("NFC", cleaned)
     return cleaned.lower()
 
 
@@ -434,19 +436,20 @@ async def on_message(message: discord.Message):
         return
 
     if tag_exists(message.channel.id, normalized):
+        print(f"Gamer tag duplicado detectado: '{normalized}' (autor: {message.author})")
         try:
             await message.delete()
         except discord.Forbidden:
             print("No se pudo borrar el mensaje duplicado: el bot necesita permiso 'Gestionar mensajes'.")
-        except discord.HTTPException:
-            pass
+        except discord.HTTPException as e:
+            print(f"No se pudo borrar el mensaje duplicado: {e}")
         try:
             await message.channel.send(
                 f"{message.author.mention} Ese gamer tag ya fue publicado antes.",
                 delete_after=10,
             )
-        except discord.HTTPException:
-            pass
+        except discord.HTTPException as e:
+            print(f"No se pudo enviar el aviso de duplicado: {e}")
         return
 
     # Nuevo tag: guardar y dejar pasar

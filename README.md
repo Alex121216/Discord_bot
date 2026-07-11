@@ -5,11 +5,13 @@ Bot en Python para un canal **#gamer-tags** que evita publicar gamer tags duplic
 ## Requisitos
 
 - Python 3.11 o superior
-- Windows (probado en Windows 10/11)
+- Windows 10/11 o Linux (probado en Kali Linux)
 
 ## Instalación
 
 1. **Clonar o copiar** la carpeta del bot en tu equipo.
+
+### Windows
 
 2. **Crear entorno virtual** (recomendado):
 
@@ -37,29 +39,72 @@ Bot en Python para un canal **#gamer-tags** que evita publicar gamer tags duplic
      - `BOT_PREFIX`: prefijo de comandos (por defecto `!`).
      - `DB_FILE`: ruta del archivo SQLite (por defecto `gamer_tags.db`).
 
+### Linux / Kali Linux
+
+2. **Dependencias del sistema** (si aún no las tienes):
+
+   ```bash
+   sudo apt update
+   sudo apt install -y python3 python3-venv python3-pip git
+   ```
+
+3. **Instalación automática** (recomendado):
+
+   ```bash
+   cd Discord_bot
+   chmod +x install.sh run_bot.sh
+   ./install.sh
+   ```
+
+   El script crea el entorno virtual, instala dependencias y copia `.env.example` a `.env` si no existe.
+
+4. **Instalación manual** (alternativa):
+
+   ```bash
+   cd Discord_bot
+   python3 -m venv venv
+   ./venv/bin/pip install -r requirements.txt
+   cp .env.example .env
+   ```
+
+5. **Configurar `.env`** (igual que en Windows):
+
+   ```bash
+   nano .env
+   ```
+
+   Rellena `DISCORD_TOKEN`, `CHANNEL_ID`, `BOT_PREFIX` y `DB_FILE`.
+
 ## Ejecución
 
 ### Opción normal (una vez)
 
-Con el entorno virtual activado:
+**Windows** (con el entorno virtual activado):
 
 ```powershell
 python bot.py
+```
+
+**Linux / Kali**:
+
+```bash
+./venv/bin/python bot.py
 ```
 
 ### Opción recomendada: reinicio automático (cortes de red)
 
 Para que el bot se **reinicie solo** si se cae por corte de red o error:
 
-- **PowerShell:** ejecuta `.\run_bot.ps1`
-- **Símbolo del sistema:** ejecuta `run_bot.bat` o haz doble clic en `run_bot.bat`
+- **Windows (PowerShell):** `.\run_bot.ps1`
+- **Windows (CMD):** `run_bot.bat` o doble clic en `run_bot.bat`
+- **Linux / Kali:** `./run_bot.sh`
 
-Si el proceso termina, espera 10 segundos y vuelve a lanzar el bot. Para detenerlo, cierra la ventana o pulsa Ctrl+C.
+Si el proceso termina, espera 10 segundos y vuelve a lanzar el bot. Para detenerlo, pulsa Ctrl+C (o cierra la ventana en Windows).
 
 ### Desconexión de red
 
 - **Cortes breves:** discord.py **reconecta solo**; no hace falta hacer nada.
-- **Cortes largos o si el bot termina:** si usas `run_bot.ps1` o `run_bot.bat`, el bot se reiniciará a los 10 segundos. Si no, abre de nuevo PowerShell en la carpeta del bot y ejecuta `python bot.py` (o `.\venv\Scripts\python.exe bot.py`).
+- **Cortes largos o si el bot termina:** usa `run_bot.ps1`, `run_bot.bat` o `run_bot.sh` para reinicio automático a los 10 segundos.
 
 ---
 
@@ -120,8 +165,10 @@ Todos usan el prefijo configurado (por defecto `!`) y solo en el canal de gamer 
 ```
 Discord_bot/
 ├── bot.py           # Código principal del bot
+├── install.sh       # Instalación en Linux / Kali
+├── run_bot.sh       # Ejecutar con reinicio automático (Linux / Kali)
 ├── run_bot.ps1      # Ejecutar con reinicio automático (PowerShell)
-├── run_bot.bat      # Ejecutar con reinicio automático (doble clic)
+├── run_bot.bat      # Ejecutar con reinicio automático (Windows CMD)
 ├── requirements.txt # Dependencias Python
 ├── .env.example     # Plantilla de variables de entorno
 ├── .env             # Tus variables (no subir a Git)
@@ -131,8 +178,18 @@ Discord_bot/
 
 ## Resumen rápido
 
-1. Instalar dependencias: `pip install -r requirements.txt`
+**Windows**
+
+1. `pip install -r requirements.txt`
 2. Copiar `.env.example` → `.env` y rellenar `DISCORD_TOKEN` y `CHANNEL_ID`
 3. Activar **Message Content Intent** en el Developer Portal
 4. Dar al bot: View Channels, Send Messages, Manage Messages, Read Message History
-5. Ejecutar: `python bot.py`
+5. Ejecutar: `python bot.py` o `.\run_bot.ps1`
+
+**Linux / Kali**
+
+1. `chmod +x install.sh run_bot.sh && ./install.sh`
+2. Editar `.env` con `DISCORD_TOKEN` y `CHANNEL_ID`
+3. Activar **Message Content Intent** en el Developer Portal
+4. Dar al bot los mismos permisos en Discord
+5. Ejecutar: `./run_bot.sh`
