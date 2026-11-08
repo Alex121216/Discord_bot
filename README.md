@@ -142,7 +142,7 @@ Durante el uso normal:
 - Toma el mensaje completo como gamer tag y exige el formato Activision ID: nombre de 2 a 16 caracteres, un `#` y solo números (ejemplo: `Gamer#1234567`). Cualquier otro mensaje se borra y se avisa al usuario.
 - Normaliza antes de comparar: quita espacios al inicio/final, unifica espacios múltiples y compara sin distinguir mayúsculas/minúsculas.
 - Si el tag no existe: lo guarda y deja el mensaje.
-- Si el tag ya existe: borra el mensaje y responde al usuario con un enlace directo al gamer tag original: *"Este gamer tag ya está en la lista, lo puedes ver aquí: [enlace]"*. El aviso se borra solo a los 15 segundos.
+- Si el tag ya existe: borra el mensaje y responde al usuario con un enlace directo al gamer tag original: *"Este gamer tag ya está en la lista, lo puedes ver aquí: [enlace]"*. El aviso se borra solo a los 20 minutos.
 - Si un usuario edita un mensaje y el nuevo texto es un duplicado, también se borra y recibe el mismo aviso con el enlace.
 - Si se borra el mensaje que registró un tag, ese tag queda libre de nuevo.
 - Ignora los mensajes de otros bots.

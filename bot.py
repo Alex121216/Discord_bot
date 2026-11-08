@@ -457,7 +457,7 @@ async def on_message(message: discord.Message):
                     message.guild.id, message.channel.id, original_info["message_id"]
                 )
                 warning = f"{message.author.mention} Este gamer tag ya está en la lista, lo puedes ver aquí: {jump_url}"
-            await message.channel.send(warning, delete_after=15)
+            await message.channel.send(warning, delete_after=1200)
         except discord.HTTPException as e:
             print(f"No se pudo enviar el aviso de duplicado: {e}")
         return
@@ -534,7 +534,7 @@ async def on_message_edit(before: discord.Message, after: discord.Message):
             if after.guild is not None:
                 jump_url = build_jump_url(after.guild.id, after.channel.id, existing["message_id"])
                 warning = f"{after.author.mention} Este gamer tag ya está en la lista, lo puedes ver aquí: {jump_url}"
-            await after.channel.send(warning, delete_after=15)
+            await after.channel.send(warning, delete_after=1200)
         except discord.HTTPException:
             pass
         return
