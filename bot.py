@@ -23,6 +23,7 @@ CHANNEL_ID = int(os.getenv("CHANNEL_ID", 0))
 BOT_PREFIX = os.getenv("BOT_PREFIX", "!")
 DB_FILE = os.getenv("DB_FILE", "gamer_tags.db")
 COMMAND_DELETE_AFTER = 10  # segundos para borrar mensaje del comando y respuesta del bot
+DUPLICATE_WARNING_DELETE_AFTER = 1200  # segundos que se muestra el aviso de tag duplicado (20 minutos)
 
 if not DISCORD_TOKEN:
     raise ValueError("DISCORD_TOKEN no está definido en .env")
@@ -201,6 +202,30 @@ GAMER_TAG_MAX_LEN = 16  # máximo 16 caracteres (solo el nombre)
 def build_jump_url(guild_id: int, channel_id: int, message_id) -> str:
     """Construye el enlace directo a un mensaje de Discord."""
     return f"https://discord.com/channels/{guild_id}/{channel_id}/{message_id}"
+
+
+# Último aviso de duplicado enviado por el bot: solo debe haber uno visible a la vez
+last_duplicate_warning: discord.Message | None = None
+duplicate_warning_lock = asyncio.Lock()
+
+
+async def send_duplicate_warning(channel, text: str) -> None:
+    """
+    Envía el aviso de tag duplicado. Si todavía hay un aviso anterior visible,
+    lo borra primero para que en el canal solo se vea el aviso más reciente.
+    """
+    global last_duplicate_warning
+    async with duplicate_warning_lock:
+        previous = last_duplicate_warning
+        last_duplicate_warning = None
+        if previous is not None:
+            try:
+                await previous.delete()
+            except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+                pass  # ya se borró solo o no hay permiso
+        last_duplicate_warning = await channel.send(
+            text, delete_after=DUPLICATE_WARNING_DELETE_AFTER
+        )
 
 
 def is_valid_gamer_tag(text: str) -> bool:
@@ -457,7 +482,7 @@ async def on_message(message: discord.Message):
                     message.guild.id, message.channel.id, original_info["message_id"]
                 )
                 warning = f"{message.author.mention} Este gamer tag ya está en la lista, lo puedes ver aquí: {jump_url}"
-            await message.channel.send(warning, delete_after=1200)
+            await send_duplicate_warning(message.channel, warning)
         except discord.HTTPException as e:
             print(f"No se pudo enviar el aviso de duplicado: {e}")
         return
@@ -534,7 +559,7 @@ async def on_message_edit(before: discord.Message, after: discord.Message):
             if after.guild is not None:
                 jump_url = build_jump_url(after.guild.id, after.channel.id, existing["message_id"])
                 warning = f"{after.author.mention} Este gamer tag ya está en la lista, lo puedes ver aquí: {jump_url}"
-            await after.channel.send(warning, delete_after=1200)
+            await send_duplicate_warning(after.channel, warning)
         except discord.HTTPException:
             pass
         return
