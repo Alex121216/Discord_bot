@@ -198,6 +198,11 @@ GAMER_TAG_MIN_LEN = 2   # mínimo 2 caracteres (solo el nombre)
 GAMER_TAG_MAX_LEN = 16  # máximo 16 caracteres (solo el nombre)
 
 
+def build_jump_url(guild_id: int, channel_id: int, message_id) -> str:
+    """Construye el enlace directo a un mensaje de Discord."""
+    return f"https://discord.com/channels/{guild_id}/{channel_id}/{message_id}"
+
+
 def is_valid_gamer_tag(text: str) -> bool:
     """
     Comprueba si el texto es un gamer tag válido (formato Activision ID: Nombre#1234567).
@@ -437,6 +442,8 @@ async def on_message(message: discord.Message):
 
     if tag_exists(message.channel.id, normalized):
         print(f"Gamer tag duplicado detectado: '{normalized}' (autor: {message.author})")
+        # Obtener la info del tag original ANTES de borrar el mensaje duplicado
+        original_info = get_tag_info(message.channel.id, normalized)
         try:
             await message.delete()
         except discord.Forbidden:
@@ -444,10 +451,13 @@ async def on_message(message: discord.Message):
         except discord.HTTPException as e:
             print(f"No se pudo borrar el mensaje duplicado: {e}")
         try:
-            await message.channel.send(
-                f"{message.author.mention} Ese gamer tag ya fue publicado antes.",
-                delete_after=10,
-            )
+            warning = f"{message.author.mention} Este gamer tag ya está en la lista."
+            if original_info is not None and message.guild is not None:
+                jump_url = build_jump_url(
+                    message.guild.id, message.channel.id, original_info["message_id"]
+                )
+                warning = f"{message.author.mention} Este gamer tag ya está en la lista, lo puedes ver aquí: {jump_url}"
+            await message.channel.send(warning, delete_after=15)
         except discord.HTTPException as e:
             print(f"No se pudo enviar el aviso de duplicado: {e}")
         return
@@ -520,10 +530,11 @@ async def on_message_edit(before: discord.Message, after: discord.Message):
         except discord.Forbidden:
             pass
         try:
-            await after.channel.send(
-                f"{after.author.mention} Ese gamer tag ya fue publicado antes.",
-                delete_after=10,
-            )
+            warning = f"{after.author.mention} Este gamer tag ya está en la lista."
+            if after.guild is not None:
+                jump_url = build_jump_url(after.guild.id, after.channel.id, existing["message_id"])
+                warning = f"{after.author.mention} Este gamer tag ya está en la lista, lo puedes ver aquí: {jump_url}"
+            await after.channel.send(warning, delete_after=15)
         except discord.HTTPException:
             pass
         return
